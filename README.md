@@ -1,4 +1,4 @@
-# TornadoDamage
+# Tornado Damage
 Exploring the relationship between the year a tornado occurred and the average property loss it caused.
 
 We are using data collected and compiled by the National Weather Service from their Severe Weather and Tornadoes reports. Each row is a different tornado that took place in the United States from 1950 to 2023. For our analysis we will be focusing on data from 1950 to 2023 due to changes in how the data was recorded
