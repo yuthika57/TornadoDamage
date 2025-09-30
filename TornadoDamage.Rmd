@@ -1,0 +1,155 @@
+---
+title: "An Analysis of Property Damage Caused by Tornadoes"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(scales)
+```
+
+# Group members
+> Nuqman Iskandar, Gaurav Capila, Yuthika Goel, Janet Seidl 
+
+```{r echo = FALSE, warning = FALSE, message = FALSE}
+tornado_data <- read_csv("../data/1950-2023_actual_tornadoes.csv")
+```
+
+# Introduction
+In recent years climate change has been linked to more extreme weather events around the world, from hurricanes to wildfires. Among these, tornadoes are one of the most unpredictable and destructive in the US. Given the growing concern about economic loss and disaster preparedness, it’s important to know if tornadoes are getting more severe.
+
+Our question is: Has the average property loss from tornadoes in the US increased from 1950 to 1995? We will look at the relationship between the year a tornado occurred and the average property loss it caused.
+
+We find strong evidence that the average loss from tornadoes has increased from 1950 to 1955. This indicates that tornadoes have been getting more severe, and tornadoes today may be causing even higher amounts of property damage.
+
+# Background
+We are using data collected and compiled by the National Weather Service from their Severe Weather and Tornadoes reports. Each row is a different tornado that took place in the United States from 1950 to 2023. For our analysis we will be focusing on data from 1950 to 2023 due to changes in how the data was recorded\
+
+We will be focusing on the yr and loss variables.\
+
+- The yr variable is the year when the tornado took place (1950-1995)
+- The loss variable represents the estimated property loss in dollars from the tornado. A higher value indicates more loss and we will be using this as our indicator for how severe a tornado is. 
+
+The representation of the loss variable changes throughout the dataset. From 1950 - 1995, the variable is represented by a categorization of tornado damage with each category being an order of magnitude larger than the previous. Starting in 1996, they instead recorded the variable in millions of dollars and in 2016 switched to whole dollar amounts. In order to keep the larger part of our data, we are focusing on 1950 - 1995 since there is not an accurate way to switch the values from categories to dollar amounts. This will also help reduce the affect inflation has on our analysis. 
+
+
+Focusing on  our desired time frame and looking at the average property loss caused by tornadoes, we get the following scatter plot.
+```{r}
+tornado_data_new <- tornado_data %>%
+  filter(yr < 1996 & loss != 0) 
+
+avg_loss_by_year <- tornado_data_new %>%
+  group_by(yr) %>%
+  summarize(avg_loss = mean(loss))
+
+ggplot(avg_loss_by_year, aes(x = yr, y = avg_loss)) +
+  geom_point(color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_y_continuous(
+    limits = c(2, 5),
+    labels = c("$500", "$5,000", "$50,000", "$500,000")
+  ) +
+  labs(
+    title = "Average Tornado Loss by Year (1950–1995)",
+    x = "Year",
+    y = "Average Estimated Loss"
+  ) +
+  theme_minimal()+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+The scatter plot displays the average estimated property loss from tornadoes by year from 1950 to 1995. Each point represents the mean property loss of tornadoes that occurred in a given year.The upward sloping regression line suggests an increasing trend in average loss over time. This may indicate that tornadoes have become more economically damaging, possibly due to factors such as there are now more buildings in areas where tornadoes are reported and also improved damage reporting methods.
+
+# Analysis
+
+To formally assess whether tornado losses have significantly increased over years, we use simple linear regression.
+
+## Model Statement
+$Y$ = average estimated property loss from tornadoes in a given year
+
+$X$ = year (from 1950 to 1995)
+
+We model this relationship as:
+
+$Y = \beta_0 + \beta_1 X + \epsilon$
+Where:
+
+$\beta_0$ is the intercept
+
+$\beta_1$ is the slope, representing the change in average property loss per year
+
+$\epsilon$ is the error term
+
+```{r}
+model <- lm(avg_loss ~ yr, data = avg_loss_by_year)
+```
+
+## Assumptions
+```{r}
+# Residuals plots
+residuals = resid(model)
+ggplot(mapping = aes(x = avg_loss_by_year$yr, y = residuals)) +
+  geom_point(color = "darkviolet") +
+  geom_hline(yintercept = 0) +
+  labs(
+    x = "Year"
+  ) +
+  theme_minimal()
+```
+
+- Linearity violated, the relationship between year and average loss by year is not actually linear.
+- Normal errors around 0 is satisfied; the residuals tend towards the central line, with large outliers uncommon, and they are symmetric.
+- Constant variance is satisfied; the residuals do NOT fan out or funnel in as you increase X (year).
+
+## Hypothesis Testing
+We will test the following hypothesis with $\alpha = 0.05$
+
+$H_0$: $\beta_1 = 0$ meaning there is no trend in average tornado loss over time
+
+$H_A$: $\beta_1 > 0$ meaning there is a positive in average tornado loss over time
+
+We are interested in the presence of a positive linear relationship between the two variables. Hence, we will use a one-sided alternative hypothesis test.
+
+## Outcomes
+```{r}
+summary(model)
+```
+
+```{r}
+# From the summary
+b1_hat = 0.015566
+se = 0.002503
+
+# Finding Test Statistic
+t = b1_hat/se
+t
+```
+
+Our test statistic was 6.218
+
+```{r}
+# p value for the right (upper) tail because the test statistic is positive
+p_val = pt(t, 46 - 2, lower.tail = F)
+p_val
+```
+Our p-value was 8.039372e-08 which is very small and substantially smaller than our significance value of 0.05. 
+
+## Interpretation
+Based on the regression output, the p-value for $\beta_1 < 0.05$, which means we reject the null hypothesis and conclude that the average estimated loss from tornadoes has increased over time.
+
+# Discussion
+From the interpretation, there is enough evidence to reject our null hypothesis, which means we can conclude the average estimated loss from tornadoes increased from 1950 to 1995.
+
+While this could suggest that tornadoes are getting more severe and destructive, there could be several other factors that influence our analysis. Recorded property losses may have risen due to inflation, better reporting, or greater infrastructure development in rural areas. No matter the reason, our finding highlights that tornadoes potentially cause more economic damage now than in the past.
+
+## Shortcomings
+While our data provide valuables insights, there are some shortcomings that needed to be point out.
+
+- The variables do not meet the assumption that the relationship between year and average estimated loss from tornadoes are linear. From the residual plots we can see the curved pattern which suggest that the linearity assumptions is violated. 
+- To utilize the larger part of our data, we chose to use the time period where the the estimated property loss was represented categorically with each category being an order of magnitude larger than the previous. This means that there is some pretty large intervals that fall under the same category. For example, when the loss value is a 5, the estimated property loss falls in the range of 50,000 to 500,0000. 
+
+# Reference
+1. 1950-2023_actual_tornadoes.csv from the National Oceanic and Atmospheric Administration at https://www.spc.noaa.gov/wcm/#data
